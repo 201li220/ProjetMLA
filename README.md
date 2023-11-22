@@ -9,6 +9,7 @@ En cours :
 
 2 - Implémenter le model demandé (BERT+Adapter)
 
+3- Comparaison feature based / fine tuning
 
 
 - Tuto installation
