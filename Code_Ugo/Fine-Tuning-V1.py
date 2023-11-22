@@ -34,6 +34,8 @@ test_dataset = DataLoader(tokenized_datasets['test'], shuffle=True, batch_size=1
 
 config = BertConfig()
 model = BertForSequenceClassification(config) 
+device = torch.device("cuda") if torch.cuda.is_available() else torch.device("gpu")
+model.to(device)
 
 optimizer = optim.Adam(model.parameters(),lr=0.001)
 metric=evaluate.load('accuracy')
