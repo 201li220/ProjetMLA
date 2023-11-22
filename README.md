@@ -6,6 +6,7 @@ Fini :
 En cours :
 
 1 - Tester et Fine-Tuner BERT sur le serveur gpu
+
 2 - Implémenter le model demandé (BERT+Adapter)
 
 
