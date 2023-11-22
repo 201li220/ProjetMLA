@@ -15,7 +15,7 @@ class Adapter(nn.Module):
         super(Adapter,self).__init__()
         self.FeedForward_down_layer = nn.Linear(input_size, hidden_size)
         self.FeedForward_up_layer = nn.Linear(hidden_size,input_size)
-        self.Nonlinearity_layer = nn.GELU
+        self.Nonlinearity_layer = nn.GELU()
         
     def forward(self,x):
         x = self.FeedForward_down_layer(x)
