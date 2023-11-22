@@ -2,7 +2,7 @@
 """
 Created on Tue Nov 21 11:47:48 2023
 
-@author: Elsa Laziamond
+@author: Ugo Laziamond
 """
 
 from transformers import BertModel, BertConfig
