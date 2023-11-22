@@ -18,10 +18,11 @@ class Adapter(nn.Module):
         self.Nonlinearity_layer = nn.GELU()
         
     def forward(self,x):
+        residual_inputs = x
         x = self.FeedForward_down_layer(x)
         x = self.Nonlinearity_layer(x)
         x = self.FeedForward_up_layer(x)
-        return x
+        return x+residual_inputs
 
 class BERTAdapter(nn.Module):
     def __init__(self,config,hidden_size):
