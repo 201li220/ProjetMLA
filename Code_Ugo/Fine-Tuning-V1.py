@@ -15,14 +15,17 @@ import torch.optim as optim
 import matplotlib.pyplot as plt
 from tqdm.auto import tqdm
 
+torch.cuda.empty_cache()
+
 
 class Fine_Tuning:
     def __init__(self,model,tokenizer,dataset):
         self.dataset = dataset
         self.model = model
         self.tokenizer = tokenizer
+        self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     
-    def prepared_data(self,batch_size=16):
+    def prepared_data(self,dataset_size=4000,batch_size=16):
         def tokenize_function(features,tokenizer=self.tokenizer):
             return tokenizer(features['sentence'],padding='max_length',truncation = True)
 
@@ -31,18 +34,24 @@ class Fine_Tuning:
         tokenized_datasets = tokenized_datasets.remove_columns(['idx'])
         tokenized_datasets = tokenized_datasets.rename_column("label", "labels")
         tokenized_datasets.set_format("torch")
+       
+        reduced_train_dataset = tokenized_datasets['train'].select(range(dataset_size))
+        reduced_validation_dataset = tokenized_datasets['validation'].select(range(500))
+        reduced_test_dataset = tokenized_datasets['test'].select(range(500))
+        
+        reduced_train_dataset = DataLoader(reduced_train_dataset, shuffle=True, batch_size=batch_size)
+        reduced_validation_dataset = DataLoader(reduced_validation_dataset, shuffle=True, batch_size=batch_size)
+        reduced_test_dataset = DataLoader(reduced_validation_dataset, shuffle=True, batch_size=batch_size)
 
-        self.train_dataset = DataLoader(tokenized_datasets['train'], shuffle=True, batch_size=batch_size)
-        self.val_dataset = DataLoader(tokenized_datasets['validation'], shuffle=True, batch_size=batch_size)
-        self.test_dataset = DataLoader(tokenized_datasets['test'], shuffle=True, batch_size=batch_size)
+        self.train_dataset = [ {k: v.to(self.device) for k, v in batch.items()} for batch in reduced_train_dataset ]
+        self.val_dataset = [ {k: v.to(self.device) for k, v in batch.items()} for batch in reduced_validation_dataset]
+        self.test_dataset = [ {k: v.to(self.device) for k, v in batch.items()} for batch in reduced_test_dataset]
     
-    def initialisation(self,optimizer,epoch=100,using_gpu=False):
+    def initialisation(self,optimizer,epoch=100):
         self.epoch = epoch
         self.optimizer = optimizer
         
-        if using_gpu:
-            device = torch.device("cuda") if torch.cuda.is_available() else torch.device("gpu")
-            self.model.to(device)
+        self.model.to(self.device)
         
         self.train_losses=[]
         self.val_losses=[]
@@ -54,14 +63,9 @@ class Fine_Tuning:
         bar_progress = tqdm(range(self.epoch))
         for i in range(self.epoch):
             self.model.train()
-            
             l = []
-            i=0
             for batch in self.train_dataset:
-                i+=1
-                print(i)
                 self.optimizer.zero_grad()
-                
                 outputs = self.model(**batch)
                 loss = outputs.loss
                 l.append(loss.item())
@@ -87,8 +91,8 @@ class Fine_Tuning:
                     with torch.no_grad():
                         outputs = self.model(**batch)
                         predictions = torch.argmax(outputs.logits, dim=-1)
-                        total += batch["label"].size(0)
-                        correct += (predictions==batch["label"]).sum().item()
+                        total += batch["labels"].size(0)
+                        correct += (predictions==batch["labels"]).sum().item()
                 self.train_accuracy.append(correct/total)
                 
                 total = 0
@@ -97,8 +101,8 @@ class Fine_Tuning:
                     with torch.no_grad():
                         outputs = self.model(**batch)
                         predictions = torch.argmax(outputs.logits, dim=-1)
-                        total += batch["label"].size(0)
-                        correct += (predictions==batch["label"]).sum().item()
+                        total += batch["labels"].size(0)
+                        correct += (predictions==batch["labels"]).sum().item()
                 self.val_accuracy.append(correct/total)
             bar_progress.update(1)
     
@@ -125,42 +129,23 @@ class Fine_Tuning:
         plt.show()
         
     def evaluation(self):
+        bar_progress = tqdm(range(len(self.test_dataset)))
         total = 0
         correct = 0
-        i = 0
         for batch in self.test_dataset:
+            #batch = {k: v.to(self.device) for k, v in batch.items()}
             with torch.no_grad():
-                print(batch)
-                i +=1
-                print(i)
                 outputs = self.model(**batch)
                 predictions = torch.argmax(outputs.logits, dim=-1)
-                total += batch["label"].size(0)
-                correct += (predictions==batch["label"]).sum().item()
+                total += batch["labels"].size(0)
+                correct += (predictions==batch["labels"]).sum().item()
+                bar_progress.update(1)
         self.test_accuracy.append(correct/total)
         
         print("The Accuracy on the test dataset :",self.test_accuracy)
 
 
-tokenizer = AutoTokenizer.from_pretrained("bert-base-cased")
-dataset = load_dataset('glue', 'cola')
 
-config = BertConfig()
-model = BertForSequenceClassification.from_pretrained("bert-base-cased", num_labels=2)
-
-optimizer = optim.Adam(model.parameters(),lr=0.001)
-
-FineTuning = Fine_Tuning(model, tokenizer, dataset)
-
-FineTuning.prepared_data(batch_size=256)
-
-FineTuning.initialisation(optimizer,epoch=1)
-
-FineTuning.training()
-
-FineTuning.plot_accuracy()
-
-FineTuning.evaluation()
 
 
 
