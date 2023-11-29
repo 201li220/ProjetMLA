@@ -39,13 +39,13 @@ class Fine_Tuning:
         reduced_validation_dataset = tokenized_datasets['validation'].select(range(500))
         reduced_test_dataset = tokenized_datasets['test'].select(range(500))
         
-        reduced_train_dataset = DataLoader(reduced_train_dataset, shuffle=True, batch_size=batch_size)
-        reduced_validation_dataset = DataLoader(reduced_validation_dataset, shuffle=True, batch_size=batch_size)
-        reduced_test_dataset = DataLoader(reduced_validation_dataset, shuffle=True, batch_size=batch_size)
+        A = DataLoader(reduced_train_dataset, shuffle=True, batch_size=batch_size)
+        B = DataLoader(reduced_validation_dataset, shuffle=True, batch_size=batch_size)
+        C = DataLoader(reduced_validation_dataset, shuffle=True, batch_size=batch_size)
 
-        self.train_dataset = [ {k: v.to(self.device) for k, v in batch.items()} for batch in reduced_train_dataset ]
-        self.val_dataset = [ {k: v.to(self.device) for k, v in batch.items()} for batch in reduced_validation_dataset]
-        self.test_dataset = [ {k: v.to(self.device) for k, v in batch.items()} for batch in reduced_test_dataset]
+        self.train_dataset = [ {k: v.to(self.device) for k, v in batch.items()} for batch in A ]
+        self.val_dataset = [ {k: v.to(self.device) for k, v in batch.items()} for batch in B]
+        self.test_dataset = [ {k: v.to(self.device) for k, v in batch.items()} for batch in C]
     
     def initialisation(self,optimizer,epoch=100):
         self.epoch = epoch
@@ -62,48 +62,45 @@ class Fine_Tuning:
     def training(self,factor=1):
         bar_progress = tqdm(range(self.epoch))
         for i in range(self.epoch):
-            self.model.train()
             l = []
+            total = 0
+            correct = 0
             for batch in self.train_dataset:
+                self.model.train()
                 self.optimizer.zero_grad()
                 outputs = self.model(**batch)
                 loss = outputs.loss
-                l.append(loss.item())
                 loss.backward()
+                l.append(loss.item())
                 self.optimizer.step()
-            
+
+                self.model.eval()
+                with torch.no_grad():
+                    outputs = self.model(**batch)
+                    predictions = torch.argmax(outputs.logits, dim=-1)
+                    total += batch["labels"].size(0)
+                    correct += (predictions==batch["labels"]).sum().item()
+
             l = np.array(l)
             self.train_losses.append(l.mean())
+            self.train_accuracy.append(correct/total)
             
             l = []
+            total = 0
+            correct = 0
+            self.model.eval()
             for batch in self.val_dataset:
-                outputs = self.model(**batch)
-                loss = outputs.loss
-                l.append(loss.item())
-            
+                with torch.no_grad():
+                    outputs = self.model(**batch)
+                    loss = outputs.loss
+                    l.append(loss.item())
+                    
+                    predictions = torch.argmax(outputs.logits, dim=-1)
+                    total += batch["labels"].size(0)
+                    correct += (predictions==batch["labels"]).sum().item()
             l = np.array(l)
             self.val_losses.append(l.mean())
-            
-            if i%factor ==0:
-                total = 0
-                correct = 0
-                for batch in self.train_dataset:
-                    with torch.no_grad():
-                        outputs = self.model(**batch)
-                        predictions = torch.argmax(outputs.logits, dim=-1)
-                        total += batch["labels"].size(0)
-                        correct += (predictions==batch["labels"]).sum().item()
-                self.train_accuracy.append(correct/total)
-                
-                total = 0
-                correct = 0
-                for batch in self.val_dataset:
-                    with torch.no_grad():
-                        outputs = self.model(**batch)
-                        predictions = torch.argmax(outputs.logits, dim=-1)
-                        total += batch["labels"].size(0)
-                        correct += (predictions==batch["labels"]).sum().item()
-                self.val_accuracy.append(correct/total)
+            self.val_accuracy.append(correct/total)
             bar_progress.update(1)
     
     def plot_accuracy(self):
@@ -130,6 +127,7 @@ class Fine_Tuning:
         
     def evaluation(self):
         bar_progress = tqdm(range(len(self.test_dataset)))
+        self.model.eval()
         total = 0
         correct = 0
         for batch in self.test_dataset:
@@ -143,6 +141,9 @@ class Fine_Tuning:
         self.test_accuracy.append(correct/total)
         
         print("The Accuracy on the test dataset :",self.test_accuracy)
+
+
+
 
 
 
