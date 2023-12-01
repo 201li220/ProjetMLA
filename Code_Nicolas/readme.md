@@ -1,7 +1,7 @@
 
 BertAdapterNico.py :
 
-Ajout des deux adapters à partir de Bertfromscracth qui refait un BERT sur le modèle Transformers HuggingFace
+Ajout des deux adapters (fonction d'ugo) à partir de Bertfromscracth qui refait un BERT sur le modèle Transformers HuggingFace
 https://github.com/alexriggio/BERT-LoRA-TensorRT/blob/main/src/bert_from_scratch.py
 
 A faire : 
