@@ -142,7 +142,13 @@ class Fine_Tuning:
         
         print("The Accuracy on the test dataset :",self.test_accuracy)
 
-
+    def save(self, model_path):
+        torch.save(self.state_dict(), model_path)
+        with open(txt_path,'w') as file:
+            file.write(model_path)
+        print("Model was successfully saved at "+str(model_path))
+        
+        
 
 
 
