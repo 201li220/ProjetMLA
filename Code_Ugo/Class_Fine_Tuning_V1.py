@@ -1,12 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Nov 21 18:13:10 2023
-
-@author: Ugo Laziamond
-"""
-from transformers import BertForSequenceClassification, BertTokenizer,BertModel,BertConfig, AutoTokenizer
-from datasets import load_dataset
-
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
@@ -25,9 +16,35 @@ class Fine_Tuning:
         self.tokenizer = tokenizer
         self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     
-    def prepared_data(self,dataset_size=4000,batch_size=16):
+    def prepared_data(self, dataset_size=4000, batch_size=16):
         def tokenize_function(features,tokenizer=self.tokenizer):
             return tokenizer(features['sentence'],padding='max_length',truncation = True)
+        """
+        def tokenize_function(features, tokenizer=self.tokenizer):
+            column_names = list(features.keys())
+
+            if len(column_names[:2])-2 >= 2:
+                inputs = {}
+                inputs['text'] = features[column_names[0]]
+                inputs['text_pair'] = features[column_names[1]]
+            
+                tokenized_inputs = tokenizer(
+                    **inputs,
+                    padding='max_length',
+                    truncation=True,
+                    return_tensors='pt'
+                )
+            
+                return tokenized_inputs
+            else:
+                tokenized_inputs = tokenizer(
+                    features[column_names[0]],
+                    padding='max_length',
+                    truncation=True,
+                    return_tensors='pt'
+                )
+                return tokenized_inputs"""
+
 
         tokenized_datasets = self.dataset.map(tokenize_function,batched=True)
         tokenized_datasets = tokenized_datasets.remove_columns(['sentence'])
@@ -143,11 +160,9 @@ class Fine_Tuning:
         print("The Accuracy on the test dataset :",self.test_accuracy)
 
 
-
-
-
-
-
-
+    #Sauvegarde du model à l'endroit 'path'
+    def save(self, path):
+        torch.save(self.state_dict(), path)
+        
 
 
