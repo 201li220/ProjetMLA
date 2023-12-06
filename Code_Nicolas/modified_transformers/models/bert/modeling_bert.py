@@ -902,6 +902,9 @@ class BertModel(BertPreTrainedModel):
             self.encoder.requires_grad = False
             self.pooler.requires_grad = False
 
+        for parameters in self.parameters():
+            print(parameters)
+
     def get_input_embeddings(self):
         return self.embeddings.word_embeddings
 
