@@ -1,168 +1,64 @@
+from Class_Fine_Tuning_V1 import *
+
+import os
 import numpy as np
+import json
+
+from modified_transformers import BertForSequenceClassification,BertConfig,AutoTokenizer
+from datasets import load_dataset
+from torch.optim import AdamW
 import torch
-from torch.utils.data import DataLoader
-import torch.optim as optim
-
-import matplotlib.pyplot as plt
-from tqdm.auto import tqdm
-
 torch.cuda.empty_cache()
 
 
-class Fine_Tuning:
-    def __init__(self,model,tokenizer,dataset):
-        self.dataset = dataset
-        self.model = model
-        self.tokenizer = tokenizer
-        self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+dataset_cola = [load_dataset('glue', 'cola'),2,'dataset_cola']
+dataset_sst2 = [load_dataset('glue', 'sst2'),2,'dataset_sst2']
+dataset_mrpc = [load_dataset('glue', 'stsb'),5,'dataset_mrpc']
+dataset_qqp = [load_dataset('glue', 'mnli'),3,'dataset_qqp']
+
+tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
+
+
+DATASET = [dataset_cola,dataset_sst2,dataset_mrpc,dataset_qqp]
+
+config = BertConfig(hidden_size = 512,
+                max_position_embeddings=512,
+                num_attention_heads=8,
+                num_hidden_layers = 4)
+
+model = BertForSequenceClassification(config)
+for dataset in DATASET:
     
-    def prepared_data(self, dataset_size=4000, batch_size=16):
-        def tokenize_function(features,tokenizer=self.tokenizer):
-            return tokenizer(features['sentence'],padding='max_length',truncation = True)
-        """
-        def tokenize_function(features, tokenizer=self.tokenizer):
-            column_names = list(features.keys())
-
-            if len(column_names[:2])-2 >= 2:
-                inputs = {}
-                inputs['text'] = features[column_names[0]]
-                inputs['text_pair'] = features[column_names[1]]
-            
-                tokenized_inputs = tokenizer(
-                    **inputs,
-                    padding='max_length',
-                    truncation=True,
-                    return_tensors='pt'
-                )
-            
-                return tokenized_inputs
-            else:
-                tokenized_inputs = tokenizer(
-                    features[column_names[0]],
-                    padding='max_length',
-                    truncation=True,
-                    return_tensors='pt'
-                )
-                return tokenized_inputs"""
-
-
-        tokenized_datasets = self.dataset.map(tokenize_function,batched=True)
-        tokenized_datasets = tokenized_datasets.remove_columns(['sentence'])
-        tokenized_datasets = tokenized_datasets.remove_columns(['idx'])
-        tokenized_datasets = tokenized_datasets.rename_column("label", "labels")
-        tokenized_datasets.set_format("torch")
-       
-        reduced_train_dataset = tokenized_datasets['train'].select(range(dataset_size))
-        reduced_validation_dataset = tokenized_datasets['validation'].select(range(500))
-        reduced_test_dataset = tokenized_datasets['test'].select(range(500))
-        
-        A = DataLoader(reduced_train_dataset, shuffle=True, batch_size=batch_size)
-        B = DataLoader(reduced_validation_dataset, shuffle=True, batch_size=batch_size)
-        C = DataLoader(reduced_validation_dataset, shuffle=True, batch_size=batch_size)
-
-        self.train_dataset = [ {k: v.to(self.device) for k, v in batch.items()} for batch in A ]
-        self.val_dataset = [ {k: v.to(self.device) for k, v in batch.items()} for batch in B]
-        self.test_dataset = [ {k: v.to(self.device) for k, v in batch.items()} for batch in C]
+    optimizer = AdamW(model.parameters(), lr=5e-5)
     
-    def initialisation(self,optimizer,epoch=100):
-        self.epoch = epoch
-        self.optimizer = optimizer
-        
-        self.model.to(self.device)
-        
-        self.train_losses=[]
-        self.val_losses=[]
-        self.val_accuracy =[]
-        self.train_accuracy =[]
-        self.test_accuracy = []
-        
-    def training(self,factor=1):
-        bar_progress = tqdm(range(self.epoch))
-        for i in range(self.epoch):
-            l = []
-            total = 0
-            correct = 0
-            for batch in self.train_dataset:
-                self.model.train()
-                self.optimizer.zero_grad()
-                outputs = self.model(**batch)
-                loss = outputs.loss
-                loss.backward()
-                l.append(loss.item())
-                self.optimizer.step()
-
-                self.model.eval()
-                with torch.no_grad():
-                    outputs = self.model(**batch)
-                    predictions = torch.argmax(outputs.logits, dim=-1)
-                    total += batch["labels"].size(0)
-                    correct += (predictions==batch["labels"]).sum().item()
-
-            l = np.array(l)
-            self.train_losses.append(l.mean())
-            self.train_accuracy.append(correct/total)
-            
-            l = []
-            total = 0
-            correct = 0
-            self.model.eval()
-            for batch in self.val_dataset:
-                with torch.no_grad():
-                    outputs = self.model(**batch)
-                    loss = outputs.loss
-                    l.append(loss.item())
-                    
-                    predictions = torch.argmax(outputs.logits, dim=-1)
-                    total += batch["labels"].size(0)
-                    correct += (predictions==batch["labels"]).sum().item()
-            l = np.array(l)
-            self.val_losses.append(l.mean())
-            self.val_accuracy.append(correct/total)
-            bar_progress.update(1)
+    FineTuning = Fine_Tuning(model, tokenizer, dataset[0])
+    FineTuning.prepared_data(batch_size=32)
+    FineTuning.initialisation(optimizer,epoch=1)
     
-    def plot_accuracy(self):
-        plt.plot(self.train_accuracy,label='Train Accuracy')
-        plt.plot(self.val_accuracy,label='Validation Accuracy')
-        
-        plt.title('Graph of Accuracy')
-        plt.xlabel('Epoch')
-        plt.ylabel('Accuracy')
-        plt.legend()
+    FineTuning.evaluation()
+    FineTuning.train_accuracy.append(FineTuning.test_accuracy[0])
+    FineTuning.val_accuracy.append(FineTuning.test_accuracy[0])
+    
+    FineTuning.training()
 
-        plt.show()
-        
-    def plot_loss(self):
-        plt.plot(self.train_losses,label='Train Loss')
-        plt.plot(self.val_losses,label='Validation Loss')
-        
-        plt.title('Graph of Loss')
-        plt.xlabel('Epoch')
-        plt.ylabel('Loss')
-        plt.legend()
+    FineTuning.evaluation()
 
-        plt.show()
+    data = [np.array(FineTuning.train_accuracy),
+            np.array(FineTuning.val_accuracy),
+            np.array(FineTuning.test_accuracy),
+            np.array(FineTuning.train_losses),
+            np.array(FineTuning.val_losses)
+           ]
+    file = '/admin/ProjetMLA/Code_Ugo/Resultats/Run_2'
+    name_file = dataset[2]+'_data'
+    path = os.path.join(file,name_file)
+    np.save(path,np.array(data))
         
-    def evaluation(self):
-        bar_progress = tqdm(range(len(self.test_dataset)))
-        self.model.eval()
-        total = 0
-        correct = 0
-        for batch in self.test_dataset:
-            #batch = {k: v.to(self.device) for k, v in batch.items()}
-            with torch.no_grad():
-                outputs = self.model(**batch)
-                predictions = torch.argmax(outputs.logits, dim=-1)
-                total += batch["labels"].size(0)
-                correct += (predictions==batch["labels"]).sum().item()
-                bar_progress.update(1)
-        self.test_accuracy.append(correct/total)
-        
-        print("The Accuracy on the test dataset :",self.test_accuracy)
-
-
-    #Sauvegarde du model à l'endroit 'path'
-    def save(self, path):
-        torch.save(self.state_dict(), path)
-        
-
-
+    name_file = dataset[2]+'_model.safetensors'
+    path = os.path.join('/admin/ProjetMLA/Code_Ugo/Saved_Models/Ugo_models/Run_2',name_file)
+    model.save_pretrained(path)
+    
+    torch.cuda.empty_cache()
+    
+    config.num_labels = dataset[1]
+    model = BertForSequenceClassification(config)
