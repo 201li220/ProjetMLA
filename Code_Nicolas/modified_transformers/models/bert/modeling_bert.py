@@ -381,7 +381,7 @@ class BertSelfOutput(nn.Module):
         self.config = config
         self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         if self.config.adapter:
-            self.adapter = Adapter(config.hidden_size,16)
+            self.adapter = Adapter(config.hidden_size,config.adapter_size)
         self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
@@ -464,7 +464,7 @@ class BertOutput(nn.Module):
         self.config = config
         self.dense = nn.Linear(config.intermediate_size, config.hidden_size)
         if self.config.adapter:
-            self.adapter = Adapter(config.hidden_size,16)
+            self.adapter = Adapter(config.hidden_size,config.adapter_size)
         self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 

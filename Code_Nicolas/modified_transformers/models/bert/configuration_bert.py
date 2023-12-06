@@ -157,6 +157,7 @@ class BertConfig(PretrainedConfig):
         use_cache=True,
         classifier_dropout=None,
         adapter = False,
+        adapter_size = 16
         frozen_mode = False,
         **kwargs,
     ):
@@ -178,6 +179,7 @@ class BertConfig(PretrainedConfig):
         self.use_cache = use_cache
         self.classifier_dropout = classifier_dropout
         self.adapter = adapter
+        self.adapter_size = 16
         self.frozen_mode = frozen_mode
 
 
