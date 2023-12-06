@@ -17,16 +17,12 @@ class Fine_Tuning:
         self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     
     def prepared_data(self, dataset_size=4000, batch_size=16):
-        def tokenize_function(features,tokenizer=self.tokenizer):
-            return tokenizer(features['sentence'],padding='max_length',truncation = True)
-        """
         def tokenize_function(features, tokenizer=self.tokenizer):
-            column_names = list(features.keys())
-
-            if len(column_names[:2])-2 >= 2:
+            self.column_names = list(features.keys())
+            if len(self.column_names) > 3:
                 inputs = {}
-                inputs['text'] = features[column_names[0]]
-                inputs['text_pair'] = features[column_names[1]]
+                inputs['text'] = features[self.column_names[0]]
+                inputs['text_pair'] = features[self.column_names[1]]
             
                 tokenized_inputs = tokenizer(
                     **inputs,
@@ -38,16 +34,20 @@ class Fine_Tuning:
                 return tokenized_inputs
             else:
                 tokenized_inputs = tokenizer(
-                    features[column_names[0]],
+                    features[self.column_names[0]],
                     padding='max_length',
                     truncation=True,
                     return_tensors='pt'
                 )
-                return tokenized_inputs"""
+                return tokenized_inputs
 
 
         tokenized_datasets = self.dataset.map(tokenize_function,batched=True)
-        tokenized_datasets = tokenized_datasets.remove_columns(['sentence'])
+        if len(self.column_names)>3:
+            tokenized_datasets = tokenized_datasets.remove_columns([self.column_names[0]])
+            tokenized_datasets = tokenized_datasets.remove_columns([self.column_names[1]])
+        else:
+            tokenized_datasets = tokenized_datasets.remove_columns([self.column_names[0]])
         tokenized_datasets = tokenized_datasets.remove_columns(['idx'])
         tokenized_datasets = tokenized_datasets.rename_column("label", "labels")
         tokenized_datasets.set_format("torch")
@@ -63,6 +63,8 @@ class Fine_Tuning:
         self.train_dataset = [ {k: v.to(self.device) for k, v in batch.items()} for batch in A ]
         self.val_dataset = [ {k: v.to(self.device) for k, v in batch.items()} for batch in B]
         self.test_dataset = [ {k: v.to(self.device) for k, v in batch.items()} for batch in C]
+
+        del self.column_names
     
     def initialisation(self,optimizer,epoch=100):
         self.epoch = epoch
