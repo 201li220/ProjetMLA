@@ -898,12 +898,16 @@ class BertModel(BertPreTrainedModel):
         self.post_init()
         
         if self.config.frozen_mode :
-            self.embeddings.requires_grad = False
-            self.encoder.requires_grad = False
-            self.pooler.requires_grad = False
+            for param in self.parameters():
+                param.requires_grad = False
+            for layer in self.encoder.layer:
+                for param in layer.attention.output.adapter.parameters():
+                    param.requires_grad = True
+                for param in layer.output.adapter.parameters():
+                    param.requires_grad = True
 
-        for parameters in self.parameters():
-            print(parameters)
+        #for parameters in self.parameters():
+        #    print(parameters)
 
     def get_input_embeddings(self):
         return self.embeddings.word_embeddings
