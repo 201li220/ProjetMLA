@@ -1,0 +1,221 @@
+"""
+Created on Tue Nov 21 18:13:10 2023
+
+@author: Ugo Laziamond
+"""
+
+import numpy as np
+import torch
+from torch.utils.data import DataLoader
+import torch.optim as optim
+
+import matplotlib.pyplot as plt
+from tqdm.auto import tqdm
+
+from sklearn.metrics import f1_score, matthews_corrcoef
+from scipy.stats import spearmanr
+
+torch.cuda.empty_cache()
+
+
+class Fine_Tuning:
+    def __init__(self,model,tokenizer,dataset):
+        self.dataset = dataset
+        self.model = model
+        self.tokenizer = tokenizer
+        self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+    
+    def prepared_data(self, dataset_size=5000, batch_size=16):
+        def tokenize_function(features, tokenizer=self.tokenizer):
+            self.column_names = list(features.keys())
+            if len(self.column_names) > 3:
+                inputs = {}
+                inputs['text'] = features[self.column_names[0]]
+                inputs['text_pair'] = features[self.column_names[1]]
+            
+                tokenized_inputs = tokenizer(
+                    **inputs,
+                    padding='max_length',
+                    truncation=True,
+                    return_tensors='pt'
+                )
+            
+                return tokenized_inputs
+            else:
+                tokenized_inputs = tokenizer(
+                    features[self.column_names[0]],
+                    padding='max_length',
+                    truncation=True,
+                    return_tensors='pt'
+                )
+                return tokenized_inputs
+
+        tokenized_datasets = self.dataset.map(tokenize_function,batched=True)
+        if len(self.column_names)>3:
+            tokenized_datasets = tokenized_datasets.remove_columns([self.column_names[0]])
+            tokenized_datasets = tokenized_datasets.remove_columns([self.column_names[1]])
+        else:
+            tokenized_datasets = tokenized_datasets.remove_columns([self.column_names[0]])
+        tokenized_datasets = tokenized_datasets.remove_columns(['idx'])
+        tokenized_datasets = tokenized_datasets.rename_column("label", "labels")
+        tokenized_datasets.set_format("torch")
+        
+        if dataset_size < len(tokenized_datasets['train']):
+            reduced_train_dataset = tokenized_datasets['train'].select(range(dataset_size))
+        else:
+            reduced_train_dataset = tokenized_datasets['train']
+        if 500 < len(tokenized_datasets['validation']):
+            reduced_validation_dataset = tokenized_datasets['validation'].select(range(500))
+        else:
+            reduced_validation_dataset = tokenized_datasets['validation']
+        if 500 < len(tokenized_datasets['test']):
+            reduced_test_dataset = tokenized_datasets['test'].select(range(500))
+        else:
+            reduced_test_dataset = tokenized_datasets['test']
+
+        print('nb_example in reduced_train_dataset:{}, nb_example in reduced_validation_dataset:{}, nb_example in reduced_test_dataset:{} '.format(reduced_train_dataset,reduced_validation_dataset,reduced_test_dataset))
+        A = DataLoader(reduced_train_dataset, shuffle=True, batch_size=batch_size)
+        B = DataLoader(reduced_validation_dataset, shuffle=True, batch_size=batch_size)
+        C = DataLoader(reduced_test_dataset, shuffle=True, batch_size=batch_size)
+
+        self.train_dataset = [ {k: v.to(self.device) for k, v in batch.items()} for batch in A ]
+        self.val_dataset = [ {k: v.to(self.device) for k, v in batch.items()} for batch in B]
+        self.test_dataset = [ {k: v.to(self.device) for k, v in batch.items()} for batch in C]
+
+        del self.column_names
+    
+    def initialisation(self,optimizer,epoch=100):
+        self.epoch = epoch
+        self.optimizer = optimizer
+        
+        self.model.to(self.device)
+        
+        self.train_losses=[]
+        self.val_losses=[]
+        self.val_accuracy =[]
+        self.train_accuracy =[]
+        self.test_accuracy = []
+        self.train_F1 = []
+        self.test_F1 = []
+        self.train_spearman = []
+        self.test_spearman = []
+        self.train_matthew = []
+        self.test_matthew =[]
+        
+    def training(self,factor=1):
+        bar_progress = tqdm(range(self.epoch))
+        for i in range(self.epoch):
+            l = []
+            total = 0
+            correct = 0
+            for batch in self.train_dataset:
+                self.model.train()
+                self.optimizer.zero_grad()
+                outputs = self.model(**batch)
+                loss = outputs.loss
+                loss.backward()
+                l.append(loss.item())
+                self.optimizer.step()
+
+                self.model.eval()
+                with torch.no_grad():
+                    outputs = self.model(**batch)
+                    predictions = torch.argmax(outputs.logits, dim=-1)
+                    total += batch["labels"].size(0)
+                    correct += (predictions==batch["labels"]).sum().item()
+
+            l = np.array(l)
+            self.train_losses.append(l.mean())
+            self.train_accuracy.append(correct/total)
+            
+            l = []
+            total = 0
+            correct = 0
+            self.model.eval()
+            for batch in self.val_dataset:
+                with torch.no_grad():
+                    outputs = self.model(**batch)
+                    loss = outputs.loss
+                    l.append(loss.item())
+                    
+                    predictions = torch.argmax(outputs.logits, dim=-1)
+                    total += batch["labels"].size(0)
+                    correct += (predictions==batch["labels"]).sum().item()
+            l = np.array(l)
+            self.val_losses.append(l.mean())
+            self.val_accuracy.append(correct/total)
+            bar_progress.update(1)
+    
+    def plot_accuracy(self):
+        plt.plot(self.train_accuracy,label='Train Accuracy')
+        plt.plot(self.val_accuracy,label='Validation Accuracy')
+        
+        plt.title('Graph of Accuracy')
+        plt.xlabel('Epoch')
+        plt.ylabel('Accuracy')
+        plt.legend()
+
+        plt.show()
+        
+    def plot_loss(self):
+        plt.plot(self.train_losses,label='Train Loss')
+        plt.plot(self.val_losses,label='Validation Loss')
+        
+        plt.title('Graph of Loss')
+        plt.xlabel('Epoch')
+        plt.ylabel('Loss')
+        plt.legend()
+
+        plt.show()
+        
+    def evaluation(self):
+        bar_progress = tqdm(range(len(self.test_dataset)))
+        self.model.eval()
+        total = 0
+        correct = 0
+
+        TruePositive = 0
+        TrueNegative = 0
+        FalsePositive = 0
+        FalseNegative = 0
+
+        spearman = []
+        matthew = []
+        
+        for batch in self.test_dataset:
+            #batch = {k: v.to(self.device) for k, v in batch.items()}
+            with torch.no_grad():
+                outputs = self.model(**batch)
+                predictions = torch.argmax(outputs.logits, dim=-1)
+                total += batch["labels"].size(0)
+                correct += (predictions==batch["labels"]).sum().item()
+                TruePositive += ((predictions == 1) & (batch["labels"] == 1)).sum().item()
+                FalsePositive += ((predictions == 1) & (batch["labels"] == 0)).sum().item()
+                TrueNegative += ((predictions == 0) & (batch["labels"] == 0)).sum().item()
+                FalseNegative += ((predictions == 0) & (batch["labels"] == 1)).sum().item()
+                spearman.append(spearmanr(batch["labels"],predictions)[0])
+                matthew.append(matthews_corrcoef(batch["label"],predictions))
+                bar_progress.update(1)
+        
+        
+        precision = TruePositive /(TruePositive+FalsePositive)
+        recall = TruePositive / (TruePositive + FalseNegative)
+        F1 = 2*precision*recall/(precision+recall)
+        specificity = TrueNegative/(TrueNegative+FalsePositive)
+
+        self.test_accuracy.append(correct/total)
+        self.test_F1.append(F1)
+        self.test_spearman.append(sum(spearman)/len(spearman))
+        self.test_matthew.append(sum(matthew)/len(matthew))
+        print("\n The Accuracy on the test dataset :",self.test_accuracy)
+        print("\n The F1 score on the test dataset :",self.test_F1)
+        print("\n The Spearman's Correlation Coefficient score on the test dataset :",self.test_spearman)
+        print("\n The Matthew's Correlation score on the test dataset :",self.test_matthew)
+
+
+    #Sauvegarde du model à l'endroit 'path'
+    def save(self, path):
+        torch.save(self.state_dict(), path)
+        
+
+
