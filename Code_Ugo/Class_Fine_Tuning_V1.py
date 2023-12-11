@@ -1,3 +1,9 @@
+"""
+Created on Tue Nov 21 18:13:10 2023
+
+@author: Ugo Laziamond
+"""
+
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
@@ -5,6 +11,7 @@ import torch.optim as optim
 
 import matplotlib.pyplot as plt
 from tqdm.auto import tqdm
+
 
 torch.cuda.empty_cache()
 
@@ -16,7 +23,7 @@ class Fine_Tuning:
         self.tokenizer = tokenizer
         self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     
-    def prepared_data(self, dataset_size=4000, batch_size=16):
+    def prepared_data(self, dataset_size=5000, batch_size=16):
         def tokenize_function(features, tokenizer=self.tokenizer):
             self.column_names = list(features.keys())
             if len(self.column_names) > 3:
@@ -41,7 +48,6 @@ class Fine_Tuning:
                 )
                 return tokenized_inputs
 
-
         tokenized_datasets = self.dataset.map(tokenize_function,batched=True)
         if len(self.column_names)>3:
             tokenized_datasets = tokenized_datasets.remove_columns([self.column_names[0]])
@@ -51,14 +57,24 @@ class Fine_Tuning:
         tokenized_datasets = tokenized_datasets.remove_columns(['idx'])
         tokenized_datasets = tokenized_datasets.rename_column("label", "labels")
         tokenized_datasets.set_format("torch")
-       
-        reduced_train_dataset = tokenized_datasets['train'].select(range(dataset_size))
-        reduced_validation_dataset = tokenized_datasets['validation'].select(range(500))
-        reduced_test_dataset = tokenized_datasets['test'].select(range(500))
         
+        if dataset_size < len(tokenized_datasets['train']):
+            reduced_train_dataset = tokenized_datasets['train'].select(range(dataset_size))
+        else:
+            reduced_train_dataset = tokenized_datasets['train']
+        if 500 < len(tokenized_datasets['validation']):
+            reduced_validation_dataset = tokenized_datasets['validation'].select(range(500))
+        else:
+            reduced_validation_dataset = tokenized_datasets['validation']
+        if 500 < len(tokenized_datasets['test']):
+            reduced_test_dataset = tokenized_datasets['test'].select(range(500))
+        else:
+            reduced_test_dataset = tokenized_datasets['test']
+
+        print('nb_example in reduced_train_dataset:{}, nb_example in reduced_validation_dataset:{}, nb_example in reduced_test_dataset:{} '.format(reduced_train_dataset,reduced_validation_dataset,reduced_test_dataset))
         A = DataLoader(reduced_train_dataset, shuffle=True, batch_size=batch_size)
         B = DataLoader(reduced_validation_dataset, shuffle=True, batch_size=batch_size)
-        C = DataLoader(reduced_validation_dataset, shuffle=True, batch_size=batch_size)
+        C = DataLoader(reduced_test_dataset, shuffle=True, batch_size=batch_size)
 
         self.train_dataset = [ {k: v.to(self.device) for k, v in batch.items()} for batch in A ]
         self.val_dataset = [ {k: v.to(self.device) for k, v in batch.items()} for batch in B]
@@ -149,6 +165,9 @@ class Fine_Tuning:
         self.model.eval()
         total = 0
         correct = 0
+
+        
+        
         for batch in self.test_dataset:
             #batch = {k: v.to(self.device) for k, v in batch.items()}
             with torch.no_grad():
@@ -158,6 +177,7 @@ class Fine_Tuning:
                 correct += (predictions==batch["labels"]).sum().item()
                 bar_progress.update(1)
         self.test_accuracy.append(correct/total)
+
         
         print("The Accuracy on the test dataset :",self.test_accuracy)
 
