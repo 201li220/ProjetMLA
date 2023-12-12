@@ -165,10 +165,8 @@ class Fine_Tuning:
         self.model.eval()
         total = 0
         correct = 0
-
         
-        
-        for batch in self.test_dataset:
+        for batch in self.val_dataset:
             #batch = {k: v.to(self.device) for k, v in batch.items()}
             with torch.no_grad():
                 outputs = self.model(**batch)
@@ -185,6 +183,5 @@ class Fine_Tuning:
     #Sauvegarde du model à l'endroit 'path'
     def save(self, path):
         torch.save(self.state_dict(), path)
-        
 
 
