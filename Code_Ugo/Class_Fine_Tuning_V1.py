@@ -3,11 +3,11 @@ Created on Tue Nov 21 18:13:10 2023
 
 @author: Ugo Laziamond
 """
-
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
 import torch.optim as optim
+from transformers import get_scheduler
 
 import matplotlib.pyplot as plt
 from tqdm.auto import tqdm
@@ -85,7 +85,8 @@ class Fine_Tuning:
     def initialisation(self,optimizer,epoch=100):
         self.epoch = epoch
         self.optimizer = optimizer
-        
+        num_training_steps = self.epoch * len(self.train_dataset)
+        self.lr_scheduler = get_scheduler(name="linear", optimizer=self.optimizer, num_warmup_steps=0, num_training_steps=num_training_steps)
         self.model.to(self.device)
         
         self.train_losses=[]
@@ -108,6 +109,7 @@ class Fine_Tuning:
                 loss.backward()
                 l.append(loss.item())
                 self.optimizer.step()
+                self.lr_scheduler.step()
 
                 self.model.eval()
                 with torch.no_grad():
