@@ -16,6 +16,13 @@ class Adapter(nn.Module):
         self.FeedForward_down_layer = nn.Linear(input_size, hidden_size)
         self.FeedForward_up_layer = nn.Linear(hidden_size,input_size)
         self.Nonlinearity_layer = nn.GELU
+
+        self._initialize_weights()
+
+    def _initialize_weights(self):
+        #near identity initialization
+        nn.init.eye_(self.FeedForward_down_layer.weight)
+        nn.init.eye_(self.FeedForward_up_layer.weight)
         
     def forward(self,x):
         inputs = x
