@@ -4,6 +4,12 @@ Created on Tue Nov 21 18:13:10 2023
 @author: Ugo Laziamond
 """
 
+"""
+Created on Tue Nov 21 18:13:10 2023
+
+@author: Ugo Laziamond
+"""
+
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
@@ -22,6 +28,7 @@ class Fine_Tuning:
         self.model = model
         self.tokenizer = tokenizer
         self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+    
     def load_data(self,task, dataset_size=5000, batch_size=16):
 
         self.task = task
@@ -92,7 +99,7 @@ class Fine_Tuning:
         return self.metric.compute(predictions=predictions, references=labels)[self.metric_name]
     
     def training(self,factor=1):
-        bar_progress = tqdm(range(self.epoch))
+        bar_progress = tqdm(range(self.epoch*(len(self.train_dataset)+len(self.val_dataset))))
         for i in range(self.epoch):
             l = []
             a=[]
@@ -111,7 +118,7 @@ class Fine_Tuning:
                     outputs = self.model(**batch)
                     predictions = torch.argmax(outputs.logits, dim=-1)
                     a.append(self.compute_metrics(predictions,batch["labels"]))
-
+                bar_progress.update(1)
             l = np.array(l)
             a = np.array(a)
             self.train_losses.append(l.mean())
@@ -126,12 +133,13 @@ class Fine_Tuning:
                     loss = outputs.loss
                     l.append(loss.item())
                     
+                    predictions = torch.argmax(outputs.logits, dim=-1)
                     a.append(self.compute_metrics(predictions,batch["labels"]))
+                bar_progress.update(1)
             l = np.array(l)
             self.val_losses.append(l.mean())
             a = np.array(a)
             self.val_accuracy.append(a.mean())
-            bar_progress.update(1)
     
     def plot_accuracy(self):
         plt.plot(self.train_accuracy,label='Train Accuracy')
@@ -156,7 +164,7 @@ class Fine_Tuning:
         plt.show()
         
     def evaluation(self):
-        bar_progress = tqdm(range(len(self.test_dataset)))
+        bar_progress = tqdm(range(len(self.val_dataset)))
         self.model.eval()
         a = []
 
