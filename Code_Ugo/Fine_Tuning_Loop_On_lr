@@ -11,7 +11,6 @@ import torch
 torch.cuda.empty_cache()
 
 
-dataset_cola = load_dataset('glue', 'sst2')
 learning_rate = [1e-5, 3e-5, 1e-4, 3e-3]
 epoch = [20]
 
@@ -28,8 +27,8 @@ for lr in learning_rate:
     for epochs in epoch:
         optimizer = AdamW(model.parameters(), lr=lr)
         
-        FineTuning = Fine_Tuning(model, tokenizer, dataset_cola)
-        FineTuning.prepared_data(batch_size=8)
+        FineTuning = Fine_Tuning(model, tokenizer, dataset_sst2)
+        FineTuning.load_data(task = 'sst2',batch_size=8)
         FineTuning.initialisation(optimizer,epoch=epochs)
         
         FineTuning.evaluation()
