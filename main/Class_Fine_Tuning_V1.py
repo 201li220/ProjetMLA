@@ -3,6 +3,7 @@ This script defines a Fine_Tuning class for fine-tuning a BERT model on GLUE tas
 It initializes the model, tokenizes input sentences, loads datasets, and performs training and evaluation. 
 The training loop includes forward propagation, gradient descent, and metric computation. 
 The script offers flexibility for various GLUE tasks and allows saving the model's state dictionary to a file.
+Inspired on https://huggingface.co/docs/transformers/training
 """
 
 import numpy as np
