@@ -1,0 +1,77 @@
+# Import necessary classes and modules
+from Class_Fine_Tuning_V1 import *
+import os
+import numpy as np
+import json
+
+from transformers import BertForSequenceClassification, BertConfig, AutoTokenizer
+from datasets import load_dataset
+from torch.optim import AdamW
+import torch
+torch.cuda.empty_cache()
+
+# Define hyperparameters
+learning_rate = [1e-5, 3e-5, 1e-4, 3e-3]
+epochs = [20]
+
+# Initialize tokenizer with pre-trained "bert-base-uncased"
+tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
+
+# Configure BERT model with custom settings using BertConfig
+config = BertConfig(
+    hidden_size=1024,
+    max_position_embeddings=512,
+    num_attention_heads=16,
+    num_hidden_layers=24
+)
+
+# Create a BERT model for sequence classification
+model = BertForSequenceClassification(config)
+
+# Loop over different learning rates and epochs
+for lr in learning_rate:
+    for num_epochs in epochs:
+        # Initialize AdamW optimizer for model parameters with the current learning rate
+        optimizer = AdamW(model.parameters(), lr=lr)
+        
+        # Create an instance of the Fine_Tuning class for SST-2 task
+        FineTuning = Fine_Tuning(model, tokenizer, dataset_sst2)  # Assuming 'dataset_sst2' is defined elsewhere
+        FineTuning.load_data(task='sst2', batch_size=8)
+        FineTuning.initialisation(optimizer, epoch=num_epochs)
+        
+        # Evaluate the initial performance on the test dataset
+        FineTuning.evaluation()
+        
+        # Append initial test accuracy to training and validation accuracy lists
+        FineTuning.train_accuracy.append(FineTuning.test_accuracy[0])
+        FineTuning.val_accuracy.append(FineTuning.test_accuracy[0])
+        
+        # Train the model using the fine-tuning process
+        FineTuning.training()
+    
+        # Evaluate the model after training
+        FineTuning.evaluation()
+    
+        # Save training, validation, and test metrics to a NumPy file
+        data = [
+            np.array(FineTuning.train_accuracy),
+            np.array(FineTuning.val_accuracy),
+            np.array(FineTuning.test_accuracy),
+            np.array(FineTuning.train_losses),
+            np.array(FineTuning.val_losses)
+        ]
+        file_path = '/admin/ProjetMLA/Code_Ugo/Resultats/Run_2'
+        name_file = 'learning_rate_{}_epoch_{}'.format(lr, num_epochs) + '_data'
+        save_path = os.path.join(file_path, name_file)
+        np.save(save_path, data)
+            
+        # Save the model's parameters to a file
+        name_file = 'learning_rate_{}_epoch_{}'.format(lr, num_epochs) + '_model.safetensors'
+        save_path = os.path.join('/admin/ProjetMLA/Code_Ugo/Saved_Models/Ugo_models/Run_2', name_file)
+        model.save_pretrained(save_path)
+        
+        # Clear GPU memory
+        torch.cuda.empty_cache()
+        
+        # Create a new instance of the BERT model for the next set of hyperparameters
+        model = BertForSequenceClassification(config)
