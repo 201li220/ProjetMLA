@@ -1,3 +1,12 @@
+"""
+This script fine-tunes a BERT model on various GLUE tasks, including 'cola,' 'sst2,' 'mrpc,' and 'qqp.' 
+The script initializes a BERT model with custom configurations and checks whether the correct parameters of the model's layers are frozen. 
+It iterates through each GLUE task, loading the corresponding dataset and fine-tuning the model using the AdamW optimizer. 
+The script evaluates the model's initial and final performances, appends accuracy metrics, and saves training, validation, and test metrics to NumPy files. 
+The trained model parameters are also saved separately for each task. GPU memory is cleared between tasks, 
+and the script provides insights into the frozen status of model layers.
+"""
+
 # Import necessary classes and modules
 from Class_Fine_Tuning_V1 import *
 import os
