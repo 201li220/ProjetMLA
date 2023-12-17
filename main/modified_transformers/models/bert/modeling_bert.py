@@ -376,6 +376,9 @@ class BertSelfAttention(nn.Module):
 
 
 class BertSelfOutput(nn.Module):
+
+    """Adding the adapter layer"""
+    
     def __init__(self, config):
         super().__init__()
         self.config = config
@@ -459,6 +462,9 @@ class BertIntermediate(nn.Module):
 
 
 class BertOutput(nn.Module):
+
+    """Adding the adapter layer"""
+    
     def __init__(self, config):
         super().__init__()
         self.config = config
