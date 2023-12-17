@@ -121,6 +121,15 @@ class BertConfig(PretrainedConfig):
             relevant if `config.is_decoder=True`.
         classifier_dropout (`float`, *optional*):
             The dropout ratio for the classification head.
+            
+        adapter ('bool', *optional*, defaults to 'False'):
+            Whether or not the model contains adapter modules added at the end of the attention sublayer and the feedforward 
+            sublayer.
+        adapter_size ('float', *optional*, defaults to 16):
+            Size of the adapter bottleneck dimension.
+        frozen_mode ('bool', *optional*, defaults to 'False'):
+            Whether or not the model parameters are freezed except for those related to the adapter, the layer normalization 
+            parameters and the final classifier parameters.
 
     Examples:
 
