@@ -29,13 +29,11 @@ To use this project, follow these steps:
 Clone the repository:
 
 bash
-Copy code
 git clone [repository_url]
 cd MLAProject
 Navigate to the "main" directory:
 
-bash
-Copy code
+
 cd main
 
 Usage
