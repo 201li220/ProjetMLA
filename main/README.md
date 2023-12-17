@@ -14,12 +14,15 @@ Class_Fine_Tuning_V1 is a script that introduces the Fine_Tuning class. This cla
 - DEMO_:
 
 The DEMO_ directory contains a demonstration showcasing the usage of different classes and methods created within the project.
-modified_transformers:
+- modified_transformers:
 
 The modified_transformers directory holds a modified version of the Hugging Face Transformers library, specifically the BERT model. This version allows for architectural modifications, including the inclusion of an adapter layer within the BERT model. Details of the implementation can be found in:
 main/modified_transformers/models/bert/configuration_bert.py
 main/modified_transformers/models/bert/modeling_bert.py
 main/modified_transformers/models/bert/BERTAdapter_V1.py
+
+- Results:
+File that contains different results wich obtains during our experimentation
 # Installation
 To use this project, follow these steps:
 
