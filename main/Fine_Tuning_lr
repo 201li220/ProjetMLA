@@ -1,3 +1,10 @@
+"""
+This script fine-tunes a BERT model for sentiment analysis on the SST-2 task. 
+It iterates over different learning rates and epochs, initializing a custom-configured BERT model and training it. 
+The script evaluates and saves the model's performance metrics, including accuracy and loss, for each hyperparameter combination. 
+ The objective is to determine the optimal learning rate and epoch to fine tune a bert model.
+"""
+
 # Import necessary classes and modules
 from Class_Fine_Tuning_V1 import *
 import os
