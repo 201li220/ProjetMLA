@@ -12,6 +12,7 @@ The project is organized into individual modules created by each participant. Th
 
 ## Installation
 To set up the project, use the provided requirements.txt file. Install the required dependencies using the following command:
+
 pip install -r requirements.txt
 
 ## Usage
