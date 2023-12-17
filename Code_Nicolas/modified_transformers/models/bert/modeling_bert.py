@@ -905,6 +905,10 @@ class BertModel(BertPreTrainedModel):
                     param.requires_grad = True
                 for param in layer.output.adapter.parameters():
                     param.requires_grad = True
+                for param in layer.attention.output.LayerNorm.parameters():
+                    param.requires_grad = True
+                for param in layer.output.LayerNorm.parameters():
+                    param.requires_grad = True
 
         #for parameters in self.parameters():
         #    print(parameters)
