@@ -1,20 +1,20 @@
-# ProjetMLA
+## MLAProject: Parameter-Efficient Transfer Learning for NLP
 
-Fini :
+# Description
+This project aims to reproduce the results presented in the paper titled "Parameter-Efficient Transfer Learning for NLP" by Houlsby et al. The primary objective is to implement the proposed methods and assess their effectiveness in the context of natural language processing (NLP).
 
+The paper introduces parameter-efficient transfer learning techniques for NLP tasks. It explores methods to leverage pre-trained language models effectively while minimizing the number of parameters. For detailed insights, please refer to the original paper.
 
-En cours :
+# Project Structure
+The project is organized into individual modules created by each participant. The final implementation, modules, and a demonstration notebook can be found in the "main" directory.
 
-1 - Tester et Fine-Tuner BERT sur le serveur gpu
+# Installation
+To set up the project, use the provided requirements.txt file. Install the required dependencies using the following command:
+pip install -r requirements.txt
 
-2 - Implémenter le model demandé (BERT+Adapter)
+# Contributors
 
-3- Comparaison feature based / fine tuning
-
-
-- Tuto installation
-- Notebook démo
-- Rapport 6/8 pages
-- vidéo 5Min (15 décembre)
-
-test
+- LAZIAMOND Ugo
+- PEROSINO Cyril
+- HOUDRE Nicolas
+- YU Jihan
