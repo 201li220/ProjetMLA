@@ -22,7 +22,7 @@ main/modified_transformers/models/bert/modeling_bert.py
 main/modified_transformers/models/bert/BERTAdapter_V1.py
 
 - Results:
-File that contains different results wich obtains during our experimentation
+File that contains different results we obtained during our experimentation
 # Installation
 To use this project, follow these steps:
 
