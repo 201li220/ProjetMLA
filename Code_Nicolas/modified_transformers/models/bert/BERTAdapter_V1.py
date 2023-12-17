@@ -21,8 +21,8 @@ class Adapter(nn.Module):
 
     def _initialize_weights(self):
         #near identity initialization
-        nn.init.eye_(self.FeedForward_down_layer.weight)
-        nn.init.eye_(self.FeedForward_up_layer.weight)
+        nn.init.normal_(self.FeedForward_down_layer.weight, mean = 0, std = 1e-2)
+        nn.init.normal_(self.FeedForward_up_layer.weight, mean = 0, std = 1e-2)
         
     def forward(self,x):
         inputs = x
