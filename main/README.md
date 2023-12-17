@@ -28,7 +28,6 @@ To use this project, follow these steps:
 
 Clone the repository:
 
-bash
 git clone [repository_url]
 cd MLAProject
 Navigate to the "main" directory:
