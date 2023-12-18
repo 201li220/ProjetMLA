@@ -20,7 +20,7 @@ For detailed usage instructions, please refer to the "main" file on the GitHub r
 
 ## Contributors
 
-- LAZIAMOND Ugo
-- PEROSINO Cyril
-- HOUDRE Nicolas
-- YU Jihan
+- LAZIAMOND Ugo (Ugo06)
+- PEROSINO Cyril (CaZino58)
+- HOUDRE Nicolas (201li220)
+- YU Jihan (Eter7Heaven)
